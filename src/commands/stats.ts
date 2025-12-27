@@ -26,12 +26,12 @@ export async function handleStats(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  // Generate date options for the last 30 days
+  // Generate date options for the last 25 days (Discord limit is 25 options)
   const timezoneOffsetHours = parseInt(process.env.TIMEZONE_OFFSET_HOURS || '0', 10);
   const now = new Date();
   const dates: { date: Date; label: string; value: string }[] = [];
 
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 25; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
     
@@ -77,7 +77,7 @@ export async function handleStats(interaction: ChatInputCommandInteraction) {
   await interaction.reply({
     content: '📅 **Select a date to view stats:**',
     components: [row],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 
