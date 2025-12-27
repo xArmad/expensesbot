@@ -18,12 +18,14 @@ export async function handleDaily(interaction: ChatInputCommandInteraction) {
     // Get today's stats from Stripe
     const todayStats = await getTodayStats();
     
-    // Format today's date in UTC (to match the data being shown)
-    const today = new Date();
+    // Format today's date in local timezone (matching the data range)
+    const timezoneOffsetHours = parseInt(process.env.TIMEZONE_OFFSET_HOURS || '0', 10);
+    const now = new Date();
+    const localTime = new Date(now.getTime() + (timezoneOffsetHours * 60 * 60 * 1000));
+    
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    // Use UTC date to match the data range
-    const dateStr = `${days[today.getUTCDay()]} ${months[today.getUTCMonth()]} ${today.getUTCDate()}`;
+    const dateStr = `${days[localTime.getUTCDay()]} ${months[localTime.getUTCMonth()]} ${localTime.getUTCDate()}`;
     
     const embed = new EmbedBuilder()
       .setTitle('📊 Today\'s Stats')

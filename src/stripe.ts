@@ -91,26 +91,38 @@ export interface TodayStats {
 export async function getTodayStats(): Promise<TodayStats> {
   const stripe = getStripe();
   
-  // Get start and end of today in UTC (Stripe uses UTC timestamps)
-  // Calculate "today" based on UTC to match Stripe's data
-  // This ensures consistency - "today" means the current UTC day
+  // Get timezone offset from environment (hours from UTC, e.g., -8 for PST, -5 for EST)
+  // Default to UTC (0) if not set
+  const timezoneOffsetHours = parseInt(process.env.TIMEZONE_OFFSET_HOURS || '0', 10);
+  
   const now = new Date();
-  const utcYear = now.getUTCFullYear();
-  const utcMonth = now.getUTCMonth();
-  const utcDate = now.getUTCDate();
   
-  // Create start of today in UTC (midnight UTC)
-  const startOfTodayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate, 0, 0, 0, 0));
-  // Create end of today in UTC (11:59:59.999 PM UTC)
-  const endOfTodayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate, 23, 59, 59, 999));
+  // Calculate local time by applying timezone offset
+  const localTime = new Date(now.getTime() + (timezoneOffsetHours * 60 * 60 * 1000));
   
-  // Convert to UTC timestamps
+  // Get local date components
+  const localYear = localTime.getUTCFullYear();
+  const localMonth = localTime.getUTCMonth();
+  const localDate = localTime.getUTCDate();
+  
+  // Create start of today in local timezone (midnight local time)
+  const startOfTodayLocal = new Date(Date.UTC(localYear, localMonth, localDate, 0, 0, 0, 0));
+  // Subtract the offset to get the UTC equivalent
+  const startOfTodayUTC = new Date(startOfTodayLocal.getTime() - (timezoneOffsetHours * 60 * 60 * 1000));
+  
+  // Create end of today in local timezone (11:59:59.999 PM local time)
+  const endOfTodayLocal = new Date(Date.UTC(localYear, localMonth, localDate, 23, 59, 59, 999));
+  // Subtract the offset to get the UTC equivalent
+  const endOfTodayUTC = new Date(endOfTodayLocal.getTime() - (timezoneOffsetHours * 60 * 60 * 1000));
+  
+  // Convert to UTC timestamps for Stripe
   const startTimestamp = Math.floor(startOfTodayUTC.getTime() / 1000);
   const endTimestamp = Math.floor(endOfTodayUTC.getTime() / 1000);
   
   // Debug logging
+  console.log(`[getTodayStats] Timezone offset: ${timezoneOffsetHours} hours`);
   console.log(`[getTodayStats] Current UTC time: ${now.toISOString()}`);
-  console.log(`[getTodayStats] UTC date: ${utcYear}-${utcMonth + 1}-${utcDate}`);
+  console.log(`[getTodayStats] Local date: ${localYear}-${localMonth + 1}-${localDate}`);
   console.log(`[getTodayStats] UTC range: ${startOfTodayUTC.toISOString()} to ${endOfTodayUTC.toISOString()}`);
   console.log(`[getTodayStats] Timestamps: ${startTimestamp} to ${endTimestamp}`);
   
