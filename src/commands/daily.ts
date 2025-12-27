@@ -1,4 +1,14 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js';
+import {
+  ChatInputCommandInteraction,
+  MessageFlags,
+  TextDisplayBuilder,
+  ContainerBuilder,
+  SectionBuilder,
+  ThumbnailBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
+  SlashCommandBuilder,
+} from 'discord.js';
 import { getTodayStats, formatCurrency } from '../stripe';
 import { checkRolePermission } from '../utils/permissions';
 
@@ -26,35 +36,81 @@ export async function handleDaily(interaction: ChatInputCommandInteraction) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dateStr = `${days[localTime.getUTCDay()]} ${months[localTime.getUTCMonth()]} ${localTime.getUTCDate()}`;
-    
-    const embed = new EmbedBuilder()
-      .setTitle('📊 Today\'s Stats')
-      .setDescription(`**Today ${dateStr}**`)
-      .setColor(0x5865F2)
-      .addFields(
-        {
-          name: '💰 Gross Volume',
-          value: formatCurrency(todayStats.grossVolume),
-          inline: true,
-        },
-        {
-          name: '👥 Customers',
-          value: todayStats.customers.toString(),
-          inline: true,
-        },
-        {
-          name: '💳 Payments',
-          value: todayStats.payments.toString(),
-          inline: true,
-        }
-      )
-      .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    const container = new ContainerBuilder();
+
+    const headerSection = new SectionBuilder()
+      .addTextDisplayComponents(
+        new TextDisplayBuilder()
+          .setContent('# 📊 Today\'s Stats')
+      )
+      .setThumbnailAccessory(
+        new ThumbnailBuilder()
+          .setURL(interaction.guild?.iconURL() || '')
+      );
+
+    container.addSectionComponents(headerSection);
+
+    container.addSeparatorComponents(
+      new SeparatorBuilder()
+        .setDivider(true)
+        .setSpacing(SeparatorSpacingSize.Small)
+    );
+
+    // Date header
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder()
+        .setContent(`## Today ${dateStr}`)
+    );
+
+    container.addSeparatorComponents(
+      new SeparatorBuilder()
+        .setDivider(false)
+        .setSpacing(SeparatorSpacingSize.Small)
+    );
+
+    // Stats
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder()
+        .setContent(`### 💰 Gross Volume\n\n${formatCurrency(todayStats.grossVolume)}`)
+    );
+
+    container.addSeparatorComponents(
+      new SeparatorBuilder()
+        .setDivider(false)
+        .setSpacing(SeparatorSpacingSize.Small)
+    );
+
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder()
+        .setContent(`### 👥 Customers\n\n${todayStats.customers}`)
+    );
+
+    container.addSeparatorComponents(
+      new SeparatorBuilder()
+        .setDivider(false)
+        .setSpacing(SeparatorSpacingSize.Small)
+    );
+
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder()
+        .setContent(`### 💳 Payments\n\n${todayStats.payments}`)
+    );
+
+    await interaction.editReply({
+      flags: MessageFlags.IsComponentsV2,
+      components: [container],
+    });
   } catch (error) {
     console.error('Error generating daily stats:', error);
+    const errorContainer = new ContainerBuilder();
+    errorContainer.addTextDisplayComponents(
+      new TextDisplayBuilder()
+        .setContent('# ❌ Error\n\nFailed to generate daily stats. Please check the configuration.')
+    );
     await interaction.editReply({
-      content: '❌ Failed to generate daily stats. Please check the configuration.',
+      flags: MessageFlags.IsComponentsV2,
+      components: [errorContainer],
     });
   }
 }
