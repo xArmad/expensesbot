@@ -91,20 +91,28 @@ export interface TodayStats {
 export async function getTodayStats(): Promise<TodayStats> {
   const stripe = getStripe();
   
-  // Get start and end of today in local timezone, then convert to UTC for Stripe
+  // Get start and end of today in UTC (Stripe uses UTC timestamps)
+  // We need to calculate "today" based on the user's local timezone, then convert to UTC
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const date = now.getDate();
   
-  // Create start of today in local timezone
-  const startOfTodayLocal = new Date(year, month, date, 0, 0, 0, 0);
-  // Create end of today in local timezone
-  const endOfTodayLocal = new Date(year, month, date, 23, 59, 59, 999);
+  // Get local date components
+  const localYear = now.getFullYear();
+  const localMonth = now.getMonth();
+  const localDate = now.getDate();
   
-  // Convert to UTC timestamps for Stripe (Stripe uses UTC)
+  // Create start of today in local timezone (midnight local time)
+  const startOfTodayLocal = new Date(localYear, localMonth, localDate, 0, 0, 0, 0);
+  // Create end of today in local timezone (11:59:59.999 PM local time)
+  const endOfTodayLocal = new Date(localYear, localMonth, localDate, 23, 59, 59, 999);
+  
+  // Convert to UTC timestamps (getTime() returns milliseconds in UTC)
   const startTimestamp = Math.floor(startOfTodayLocal.getTime() / 1000);
   const endTimestamp = Math.floor(endOfTodayLocal.getTime() / 1000);
+  
+  // Debug logging
+  console.log(`[getTodayStats] Local date: ${localYear}-${localMonth + 1}-${localDate}`);
+  console.log(`[getTodayStats] UTC range: ${new Date(startTimestamp * 1000).toISOString()} to ${new Date(endTimestamp * 1000).toISOString()}`);
+  console.log(`[getTodayStats] Timestamps: ${startTimestamp} to ${endTimestamp}`);
   
   // Get all PaymentIntents for today (modern Stripe approach)
   let allPaymentIntents: Stripe.PaymentIntent[] = [];
@@ -252,6 +260,24 @@ export async function getTodayStats(): Promise<TodayStats> {
   
   // Count successful payments (payment intents + standalone charges)
   const payments = successfulPaymentIntents.length + standaloneCharges.length;
+  
+  // Debug logging
+  console.log(`[getTodayStats] Results:`);
+  console.log(`  - PaymentIntents found: ${allPaymentIntents.length} (successful: ${successfulPaymentIntents.length})`);
+  console.log(`  - Charges found: ${allCharges.length} (successful: ${successfulCharges.length}, standalone: ${standaloneCharges.length})`);
+  console.log(`  - Gross Volume: $${(grossVolume / 100).toFixed(2)}`);
+  console.log(`  - Customers: ${customers}`);
+  console.log(`  - Payments: ${payments}`);
+  
+  // Log sample payment times to verify they're within range
+  if (successfulPaymentIntents.length > 0) {
+    const samplePI = successfulPaymentIntents[0];
+    console.log(`  - Sample PaymentIntent created: ${new Date(samplePI.created * 1000).toISOString()} (${samplePI.created})`);
+  }
+  if (standaloneCharges.length > 0) {
+    const sampleCharge = standaloneCharges[0];
+    console.log(`  - Sample Charge created: ${new Date(sampleCharge.created * 1000).toISOString()} (${sampleCharge.created})`);
+  }
   
   return {
     grossVolume,
