@@ -18,11 +18,12 @@ export async function handleDaily(interaction: ChatInputCommandInteraction) {
     // Get today's stats from Stripe
     const todayStats = await getTodayStats();
     
-    // Format today's date
+    // Format today's date in UTC (to match the data being shown)
     const today = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dateStr = `${days[today.getDay()]} ${months[today.getMonth()]} ${today.getDate()}`;
+    // Use UTC date to match the data range
+    const dateStr = `${days[today.getUTCDay()]} ${months[today.getUTCMonth()]} ${today.getUTCDate()}`;
     
     const embed = new EmbedBuilder()
       .setTitle('📊 Today\'s Stats')

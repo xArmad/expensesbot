@@ -92,26 +92,26 @@ export async function getTodayStats(): Promise<TodayStats> {
   const stripe = getStripe();
   
   // Get start and end of today in UTC (Stripe uses UTC timestamps)
-  // We need to calculate "today" based on the user's local timezone, then convert to UTC
+  // Calculate "today" based on UTC to match Stripe's data
+  // This ensures consistency - "today" means the current UTC day
   const now = new Date();
+  const utcYear = now.getUTCFullYear();
+  const utcMonth = now.getUTCMonth();
+  const utcDate = now.getUTCDate();
   
-  // Get local date components
-  const localYear = now.getFullYear();
-  const localMonth = now.getMonth();
-  const localDate = now.getDate();
+  // Create start of today in UTC (midnight UTC)
+  const startOfTodayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate, 0, 0, 0, 0));
+  // Create end of today in UTC (11:59:59.999 PM UTC)
+  const endOfTodayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate, 23, 59, 59, 999));
   
-  // Create start of today in local timezone (midnight local time)
-  const startOfTodayLocal = new Date(localYear, localMonth, localDate, 0, 0, 0, 0);
-  // Create end of today in local timezone (11:59:59.999 PM local time)
-  const endOfTodayLocal = new Date(localYear, localMonth, localDate, 23, 59, 59, 999);
-  
-  // Convert to UTC timestamps (getTime() returns milliseconds in UTC)
-  const startTimestamp = Math.floor(startOfTodayLocal.getTime() / 1000);
-  const endTimestamp = Math.floor(endOfTodayLocal.getTime() / 1000);
+  // Convert to UTC timestamps
+  const startTimestamp = Math.floor(startOfTodayUTC.getTime() / 1000);
+  const endTimestamp = Math.floor(endOfTodayUTC.getTime() / 1000);
   
   // Debug logging
-  console.log(`[getTodayStats] Local date: ${localYear}-${localMonth + 1}-${localDate}`);
-  console.log(`[getTodayStats] UTC range: ${new Date(startTimestamp * 1000).toISOString()} to ${new Date(endTimestamp * 1000).toISOString()}`);
+  console.log(`[getTodayStats] Current UTC time: ${now.toISOString()}`);
+  console.log(`[getTodayStats] UTC date: ${utcYear}-${utcMonth + 1}-${utcDate}`);
+  console.log(`[getTodayStats] UTC range: ${startOfTodayUTC.toISOString()} to ${endOfTodayUTC.toISOString()}`);
   console.log(`[getTodayStats] Timestamps: ${startTimestamp} to ${endTimestamp}`);
   
   // Get all PaymentIntents for today (modern Stripe approach)
