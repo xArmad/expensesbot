@@ -85,16 +85,18 @@ export function setupBot(client: Client) {
       }
     } catch (error) {
       console.error('❌ Error handling interaction:', error);
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({
-          content: '❌ An error occurred while processing your request.',
-          ephemeral: true,
-        }).catch(() => {});
-      } else {
-        await interaction.reply({
-          content: '❌ An error occurred while processing your request.',
-          ephemeral: true,
-        }).catch(() => {});
+      if (interaction.isChatInputCommand() || interaction.isMessageComponent() || interaction.isModalSubmit()) {
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({
+            content: '❌ An error occurred while processing your request.',
+            ephemeral: true,
+          }).catch(() => {});
+        } else {
+          await interaction.reply({
+            content: '❌ An error occurred while processing your request.',
+            ephemeral: true,
+          }).catch(() => {});
+        }
       }
     }
   });

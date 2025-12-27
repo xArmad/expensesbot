@@ -50,7 +50,7 @@ export async function handleSummary(interaction: ChatInputCommandInteraction) {
             .slice(0, 10)
             .map(
               (exp) =>
-                `-$${exp.amount.toFixed(2)} ${exp.description}${exp.category ? ` (${exp.category})` : ''}`
+                `-$${exp.amount.toFixed(2)}${exp.category ? ` (${exp.category})` : ''}`
             )
             .join('\n')
         : 'No expenses';
