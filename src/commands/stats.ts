@@ -104,7 +104,6 @@ export async function handleStatsDateSelect(interaction: Interaction) {
     const stats = await getStatsForDate(selectedDate);
     
     // Format the date for display
-    const timezoneOffsetHours = parseInt(process.env.TIMEZONE_OFFSET_HOURS || '0', 10);
     const localTime = new Date(selectedDate.getTime() + (timezoneOffsetHours * 60 * 60 * 1000));
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
