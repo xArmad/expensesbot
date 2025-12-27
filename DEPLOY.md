@@ -20,7 +20,8 @@ git commit -m "Your commit message here"
 git push origin master
 
 # Push to JustRunMy.App (auto-deploys)
-git push -u https://a4Z2Q:w2JYe48Tq@justrunmy.app/git/r_Eg6z4 HEAD:deploy
+# NOTE: Replace USERNAME and PASSWORD with your actual JustRunMy.App credentials
+git push -u https://USERNAME:PASSWORD@justrunmy.app/git/r_Eg6z4 HEAD:deploy
 ```
 
 ## JustRunMy.App Remote
@@ -29,7 +30,8 @@ The JustRunMy.App remote is already configured. You can also add it as a named r
 
 ```bash
 # Add remote (one-time setup)
-git remote add justrunmy https://a4Z2Q:w2JYe48Tq@justrunmy.app/git/r_Eg6z4
+# NOTE: Replace USERNAME and PASSWORD with your actual JustRunMy.App credentials
+git remote add justrunmy https://USERNAME:PASSWORD@justrunmy.app/git/r_Eg6z4
 
 # Then push with:
 git push justrunmy HEAD:deploy
@@ -55,7 +57,8 @@ git push justrunmy HEAD:deploy
 ## Notes
 
 - JustRunMy.App does **NOT** auto-detect changes - you must push manually
-- The push command includes credentials, so keep it secure
+- **IMPORTANT**: Never commit credentials to git. Store them securely and use placeholders in this file.
 - Both GitHub and JustRunMy.App need to be pushed separately
 - JustRunMy.App will rebuild and restart automatically after push
+- If credentials are exposed, rotate them immediately in JustRunMy.App dashboard
 
