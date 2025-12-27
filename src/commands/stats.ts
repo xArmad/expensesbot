@@ -16,11 +16,11 @@ import {
 import { getStatsForDate, formatCurrency } from '../stripe';
 import { checkRolePermission } from '../utils/permissions';
 
-export const statsCommand = new SlashCommandBuilder()
-  .setName('stats')
+export const historyCommand = new SlashCommandBuilder()
+  .setName('history')
   .setDescription('View stats for a specific date');
 
-export async function handleStats(interaction: ChatInputCommandInteraction) {
+export async function handleHistory(interaction: ChatInputCommandInteraction) {
   // Check if user has required role
   if (!(await checkRolePermission(interaction))) {
     return;
@@ -61,7 +61,7 @@ export async function handleStats(interaction: ChatInputCommandInteraction) {
   }
 
   const selectMenu = new StringSelectMenuBuilder()
-    .setCustomId('stats_date_select')
+    .setCustomId('history_date_select')
     .setPlaceholder('Select a date to view stats')
     .setMaxValues(1);
 
@@ -78,13 +78,12 @@ export async function handleStats(interaction: ChatInputCommandInteraction) {
   await interaction.reply({
     content: '📅 **Select a date to view stats:**',
     components: [row],
-    flags: MessageFlags.Ephemeral,
   });
 }
 
-export async function handleStatsDateSelect(interaction: Interaction) {
+export async function handleHistoryDateSelect(interaction: Interaction) {
   if (!interaction.isStringSelectMenu()) return;
-  if (interaction.customId !== 'stats_date_select') return;
+  if (interaction.customId !== 'history_date_select') return;
 
   await interaction.deferUpdate();
 
