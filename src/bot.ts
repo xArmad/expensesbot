@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, Interaction } from 'discord.js';
 import { initializeDatabase } from './database';
 import { registerCommands, handleCommand } from './commands';
 import { handleCategorySelect, handleExpenseModal, handleRemoveSelect } from './commands/expense';
+import { handleStatsDateSelect } from './commands/stats';
 
 export function setupBot(client: Client) {
   client.on('error', (error: Error) => {
@@ -67,6 +68,10 @@ export function setupBot(client: Client) {
         }
         if (interaction.customId === 'expense_remove_select') {
           await handleRemoveSelect(interaction);
+          return;
+        }
+        if (interaction.customId === 'stats_date_select') {
+          await handleStatsDateSelect(interaction);
           return;
         }
       }

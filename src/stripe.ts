@@ -298,3 +298,176 @@ export async function getTodayStats(): Promise<TodayStats> {
   };
 }
 
+export async function getStatsForDate(targetDate: Date): Promise<TodayStats> {
+  const stripe = getStripe();
+  
+  // Get timezone offset from environment
+  const timezoneOffsetHours = parseInt(process.env.TIMEZONE_OFFSET_HOURS || '0', 10);
+  
+  // Calculate local date components for the target date
+  const localTime = new Date(targetDate.getTime() + (timezoneOffsetHours * 60 * 60 * 1000));
+  const localYear = localTime.getUTCFullYear();
+  const localMonth = localTime.getUTCMonth();
+  const localDate = localTime.getUTCDate();
+  
+  // Create start of target date in local timezone (midnight local time)
+  const startOfDateLocal = new Date(Date.UTC(localYear, localMonth, localDate, 0, 0, 0, 0));
+  const startOfDateUTC = new Date(startOfDateLocal.getTime() - (timezoneOffsetHours * 60 * 60 * 1000));
+  
+  // Create end of target date in local timezone (11:59:59.999 PM local time)
+  const endOfDateLocal = new Date(Date.UTC(localYear, localMonth, localDate, 23, 59, 59, 999));
+  const endOfDateUTC = new Date(endOfDateLocal.getTime() - (timezoneOffsetHours * 60 * 60 * 1000));
+  
+  // Convert to UTC timestamps for Stripe
+  const startTimestamp = Math.floor(startOfDateUTC.getTime() / 1000);
+  const endTimestamp = Math.floor(endOfDateUTC.getTime() / 1000);
+  
+  // Get all PaymentIntents for the target date
+  let allPaymentIntents: Stripe.PaymentIntent[] = [];
+  let hasMorePIs = true;
+  let startingAfterPIs: string | undefined = undefined;
+  
+  while (hasMorePIs) {
+    const params: Stripe.PaymentIntentListParams = {
+      limit: 100,
+      created: {
+        gte: startTimestamp,
+        lte: endTimestamp,
+      },
+    };
+    
+    if (startingAfterPIs) {
+      params.starting_after = startingAfterPIs;
+    }
+    
+    const paymentIntents = await stripe.paymentIntents.list(params);
+    allPaymentIntents = allPaymentIntents.concat(paymentIntents.data);
+    
+    hasMorePIs = paymentIntents.has_more;
+    if (hasMorePIs && paymentIntents.data.length > 0) {
+      startingAfterPIs = paymentIntents.data[paymentIntents.data.length - 1].id;
+    } else {
+      hasMorePIs = false;
+    }
+  }
+  
+  // Get all charges for the target date
+  let allCharges: Stripe.Charge[] = [];
+  let hasMoreCharges = true;
+  let startingAfterCharges: string | undefined = undefined;
+  
+  while (hasMoreCharges) {
+    const params: Stripe.ChargeListParams = {
+      limit: 100,
+      created: {
+        gte: startTimestamp,
+        lte: endTimestamp,
+      },
+    };
+    
+    if (startingAfterCharges) {
+      params.starting_after = startingAfterCharges;
+    }
+    
+    const charges = await stripe.charges.list(params);
+    allCharges = allCharges.concat(charges.data);
+    
+    hasMoreCharges = charges.has_more;
+    if (hasMoreCharges && charges.data.length > 0) {
+      startingAfterCharges = charges.data[charges.data.length - 1].id;
+    } else {
+      hasMoreCharges = false;
+    }
+  }
+  
+  // Filter successful payment intents
+  const successfulPaymentIntents = allPaymentIntents.filter(pi => pi.status === 'succeeded');
+  
+  // Filter successful charges
+  const successfulCharges = allCharges.filter(charge => charge.status === 'succeeded' && charge.paid);
+  
+  // Get charge IDs from payment intents to avoid double counting
+  const chargeIdsFromPIs = new Set<string>();
+  successfulPaymentIntents.forEach(pi => {
+    if (pi.latest_charge) {
+      const chargeId = typeof pi.latest_charge === 'string' ? pi.latest_charge : pi.latest_charge.id;
+      if (chargeId) {
+        chargeIdsFromPIs.add(chargeId);
+      }
+    }
+  });
+  
+  // Filter out charges that are already counted via PaymentIntents
+  const standaloneCharges = successfulCharges.filter(charge => !chargeIdsFromPIs.has(charge.id));
+  
+  // Calculate gross volume from both sources
+  const paymentIntentsVolume = successfulPaymentIntents.reduce((sum, pi) => {
+    return sum + (pi.amount_received || pi.amount || 0);
+  }, 0);
+  
+  const chargesVolume = standaloneCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  const grossVolume = paymentIntentsVolume + chargesVolume;
+  
+  // Count unique customers from both sources
+  const uniqueCustomers = new Set<string>();
+  
+  // Add customers from PaymentIntents
+  successfulPaymentIntents.forEach(pi => {
+    let customerIdentifier: string | null = null;
+    
+    if (pi.customer) {
+      if (typeof pi.customer === 'string') {
+        customerIdentifier = pi.customer;
+      } else if (typeof pi.customer === 'object' && pi.customer !== null && 'id' in pi.customer) {
+        customerIdentifier = (pi.customer as any).id;
+      }
+    }
+    
+    if (!customerIdentifier && pi.receipt_email) {
+      const email = pi.receipt_email.toLowerCase().trim();
+      if (email) {
+        customerIdentifier = `email:${email}`;
+      }
+    }
+    
+    if (customerIdentifier) {
+      uniqueCustomers.add(customerIdentifier);
+    }
+  });
+  
+  // Add customers from standalone charges
+  standaloneCharges.forEach(charge => {
+    let customerIdentifier: string | null = null;
+    
+    if (charge.customer) {
+      if (typeof charge.customer === 'string') {
+        customerIdentifier = charge.customer;
+      } else if (typeof charge.customer === 'object' && charge.customer !== null && 'id' in charge.customer) {
+        customerIdentifier = (charge.customer as any).id;
+      }
+    }
+    
+    if (!customerIdentifier && charge.billing_details?.email) {
+      const email = charge.billing_details.email.toLowerCase().trim();
+      if (email) {
+        customerIdentifier = `email:${email}`;
+      }
+    }
+    
+    if (customerIdentifier) {
+      uniqueCustomers.add(customerIdentifier);
+    }
+  });
+  
+  const customers = uniqueCustomers.size;
+  
+  // Count successful payments
+  const payments = successfulPaymentIntents.length + standaloneCharges.length;
+  
+  return {
+    grossVolume,
+    customers,
+    payments,
+  };
+}
+

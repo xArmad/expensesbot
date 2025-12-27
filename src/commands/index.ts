@@ -1,10 +1,12 @@
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { expenseCommand } from './expense';
 import { dailyCommand } from './daily';
+import { statsCommand } from './stats';
 import { handleBalance } from './balance';
 import { handleExpense } from './expense';
 import { handleRevenue } from './revenue';
 import { handleDaily } from './daily';
+import { handleStats } from './stats';
 
 export const commands = [
   new SlashCommandBuilder()
@@ -15,6 +17,7 @@ export const commands = [
     .setDescription('View total revenue, expenses, and true total'),
   expenseCommand,
   dailyCommand,
+  statsCommand,
 ];
 
 export async function registerCommands(clientId: string, token: string, guildId?: string) {
@@ -74,6 +77,8 @@ export async function handleCommand(interaction: any) {
     await handleRevenue(interaction);
   } else if (commandName === 'daily') {
     await handleDaily(interaction);
+  } else if (commandName === 'stats') {
+    await handleStats(interaction);
   }
 }
 
