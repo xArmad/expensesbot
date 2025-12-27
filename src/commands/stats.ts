@@ -162,6 +162,7 @@ export async function handleStatsDateSelect(interaction: Interaction) {
     );
 
     await interaction.editReply({
+      content: null, // Remove content when using components v2
       flags: MessageFlags.IsComponentsV2,
       components: [container],
     });
@@ -173,6 +174,7 @@ export async function handleStatsDateSelect(interaction: Interaction) {
         .setContent('# ❌ Error\n\nFailed to fetch stats for the selected date. Please try again.')
     );
     await interaction.editReply({
+      content: null, // Remove content when using components v2
       flags: MessageFlags.IsComponentsV2,
       components: [errorContainer],
     });
