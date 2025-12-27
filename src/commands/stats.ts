@@ -53,10 +53,11 @@ export async function handleStats(interaction: ChatInputCommandInteraction) {
       label = `${dayName} ${month} ${day}, ${year}`;
     }
     
-    // Store as ISO string for easy parsing
-    const value = date.toISOString().split('T')[0];
+    // Store the local date string (YYYY-MM-DD) for the selected date
+    // We need to use the local date, not UTC date
+    const localDateStr = `${localTime.getUTCFullYear()}-${String(localTime.getUTCMonth() + 1).padStart(2, '0')}-${String(localTime.getUTCDate()).padStart(2, '0')}`;
     
-    dates.push({ date, label, value });
+    dates.push({ date, label, value: localDateStr });
   }
 
   const selectMenu = new StringSelectMenuBuilder()
@@ -88,8 +89,16 @@ export async function handleStatsDateSelect(interaction: Interaction) {
   await interaction.deferUpdate();
 
   try {
-    const selectedDateStr = interaction.values[0];
-    const selectedDate = new Date(selectedDateStr + 'T00:00:00.000Z');
+    const selectedDateStr = interaction.values[0]; // Format: YYYY-MM-DD (local date)
+    const timezoneOffsetHours = parseInt(process.env.TIMEZONE_OFFSET_HOURS || '0', 10);
+    
+    // Parse the local date string and convert to UTC date for the function
+    // The date string represents a local date, so we need to create it at local midnight
+    // then convert to UTC for the query
+    const [year, month, day] = selectedDateStr.split('-').map(Number);
+    // Create date at local midnight, then subtract offset to get UTC equivalent
+    const localMidnight = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    const selectedDate = new Date(localMidnight.getTime() - (timezoneOffsetHours * 60 * 60 * 1000));
     
     // Get stats for the selected date
     const stats = await getStatsForDate(selectedDate);
