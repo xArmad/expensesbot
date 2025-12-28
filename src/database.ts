@@ -106,7 +106,11 @@ export async function addExpense(data: {
      RETURNING *`,
     [data.amount, data.category || null, data.createdBy || null]
   );
-  return result.rows[0];
+  const row = result.rows[0];
+  return {
+    ...row,
+    amount: parseFloat(row.amount) || 0,
+  };
 }
 
 export async function getExpenses(limit?: number): Promise<Expense[]> {
@@ -117,13 +121,21 @@ export async function getExpenses(limit?: number): Promise<Expense[]> {
   const result = limit
     ? await db.query(query, [limit])
     : await db.query(query);
-  return result.rows;
+  return result.rows.map(row => ({
+    ...row,
+    amount: parseFloat(row.amount) || 0,
+  }));
 }
 
 export async function getExpenseById(id: number): Promise<Expense | null> {
   const db = getPool();
   const result = await db.query('SELECT * FROM expenses WHERE id = $1', [id]);
-  return result.rows[0] || null;
+  if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  return {
+    ...row,
+    amount: parseFloat(row.amount) || 0,
+  };
 }
 
 export async function deleteExpense(id: number): Promise<boolean> {
